@@ -41,11 +41,25 @@ def insert_data(data):
             cursor = database.cursor()
             insert = '''
             INSERT INTO volunteer (
-                TGID, username, first_name, last_name, email, phone, address, highest_education, is_employed, needs, bio, profile_pic
+                TGID, username, first_name, last_name, email, phone, address, highest_education, is_employed, needs, bio,
+                 profile_pic
             ) VALUES (?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?) '''
             cursor.execute(insert, data)
             database.commit()
     except sq.Error as e:
         print(f"An error occurred: {e}")
 
-# create_tables()
+
+def search_table_by_tg_id(tg_id):
+    """Search table by tg_id"""
+    conn = connect()
+    try:
+        with conn as database:
+            cursor = database.cursor()
+            search = '''
+            SELECT * FROM volunteer WHERE TGID = ?
+            '''
+            cursor.execute(search, (tg_id,))
+            return cursor.fetchone()
+    except sq.Error as e:
+        print(f"An error occurred: {e}")
