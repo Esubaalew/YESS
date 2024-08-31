@@ -2,7 +2,7 @@ from decouple import config, UndefinedValueError
 import logging
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler
-from utils.db.tools import search_table_by_tg_id, insert_data
+from utils.db.tools import search_table_by_tg_id, insert_data, search_table_by_email, search_table_by_phone
 from utils.validation import is_valid_name, is_valid_email, is_valid_phone, is_valid_needs
 
 # Define states for the registration conversation
@@ -30,7 +30,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=update.effective_chat.id,
             text=f"Selam 🙌 {update.effective_sender.first_name}! , I'm YesRobot, an automated YesEthiopia client. "
                  f"Let's get to know each other! Please type /register"
-                 "to start the registration."
+                 "  to start the registration."
         )
 
 
@@ -95,9 +95,13 @@ async def gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     email = update.message.text
     if is_valid_email(email):
-        context.user_data['email'] = email
-        await update.message.reply_text("Please enter your phone number:")
-        return PHONE
+        if search_table_by_email(email.lower()):
+            await update.message.reply_text("This email is already in use. Please enter a different email address:")
+            return EMAIL
+        else:
+            context.user_data['email'] = email
+            await update.message.reply_text("Please enter your phone number:")
+            return PHONE
     else:
         await update.message.reply_text("Invalid email format. Please enter a valid email address:")
         return EMAIL
@@ -106,9 +110,14 @@ async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text
     if is_valid_phone(phone):
-        context.user_data['phone'] = phone
-        await update.message.reply_text("Please enter your address:")
-        return ADDRESS
+        if search_table_by_phone(phone):
+            await update.message.reply_text(
+                "This phone number is already in use. Please enter a different phone number:")
+            return PHONE
+        else:
+            context.user_data['phone'] = phone
+            await update.message.reply_text("Please enter your address:")
+            return ADDRESS
     else:
         await update.message.reply_text("Invalid phone number. Please enter a valid phone number with country code:")
         return PHONE
@@ -168,11 +177,11 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if 10 <= len(bio) <= 300:  # Adjust limits as needed
         tg_id = update.effective_user.id
         username = update.effective_user.username
-        first_name = context.user_data['first_name'].title()
-        last_name = context.user_data['last_name'].title()
+        first_name = context.user_data['first_name'].title().strip()
+        last_name = context.user_data['last_name'].title().strip()
         gender = context.user_data['gender']
-        email = context.user_data['email']
-        phone = context.user_data['phone']
+        email = context.user_data['email'].lower().strip()
+        phone = context.user_data['phone'].strip()
         address = context.user_data['address']
         highest_education = context.user_data['highest_education']
         is_employed = context.user_data['is_employed']
