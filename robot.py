@@ -23,11 +23,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_registered = search_table_by_tg_id(tg_id)
 
     if is_registered:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Welcome back!")
+        _, _, _, first_name, *rest = is_registered
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Welcome back, {first_name} 😊!")
     else:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="I'm YesRobot, an automated YesEthiopia client. Let's get to know each other! Please type /register "
+            text=f"Selam 🙌 {update.effective_sender.first_name}! , I'm YesRobot, an automated YesEthiopia client. "
+                 f"Let's get to know each other! Please type /register"
                  "to start the registration."
         )
 
@@ -57,7 +59,8 @@ async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return LAST_NAME
     else:
         await update.message.reply_text(
-            "Invalid first name. It should be at least 3 characters long and contain only letters. Please enter your first name again:")
+            "Invalid first name. It should be at least 3 characters long and contain only letters. Please enter your "
+            "first name again:")
         return FIRST_NAME
 
 
@@ -73,7 +76,8 @@ async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return GENDER
     else:
         await update.message.reply_text(
-            "Invalid last name. It should be at least 3 characters long and contain only letters. Please enter your last name again:")
+            "Invalid last name. It should be at least 3 characters long and contain only letters. Please enter your "
+            "last name again:")
         return LAST_NAME
 
 
@@ -164,8 +168,8 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if 10 <= len(bio) <= 300:  # Adjust limits as needed
         tg_id = update.effective_user.id
         username = update.effective_user.username
-        first_name = context.user_data['first_name']
-        last_name = context.user_data['last_name']
+        first_name = context.user_data['first_name'].title()
+        last_name = context.user_data['last_name'].title()
         gender = context.user_data['gender']
         email = context.user_data['email']
         phone = context.user_data['phone']
