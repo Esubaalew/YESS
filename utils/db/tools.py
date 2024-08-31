@@ -36,6 +36,7 @@ def create_tables():
 def insert_data(data):
     """Insert data into the database"""
     conn = connect()
+    create_tables()
     try:
         with conn as database:
             cursor = database.cursor()
@@ -53,6 +54,7 @@ def insert_data(data):
 def search_table_by_tg_id(tg_id):
     """Search table by tg_id"""
     conn = connect()
+    create_tables()
     try:
         with conn as database:
             cursor = database.cursor()
@@ -63,3 +65,4 @@ def search_table_by_tg_id(tg_id):
             return cursor.fetchone()
     except sq.Error as e:
         print(f"An error occurred: {e}")
+

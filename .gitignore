@@ -4,3 +4,4 @@
 utils\__pycache__
 utils/db/yess.sqlite
 .idea
+yess.sqlite
