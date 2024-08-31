@@ -3,7 +3,7 @@ import sqlite3 as sq
 
 
 def create_tables():
-    """Create tables if they do not exist"""
+    """Create tables if they do not exist."""
     conn = connect()
     try:
         with conn as database:
@@ -30,39 +30,42 @@ def create_tables():
             cursor.execute(create)
             database.commit()
     except sq.Error as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while creating the tables: {e}")
+    finally:
+        conn.close()
 
 
 def insert_data(data):
-    """Insert data into the database"""
+    """Insert data into the volunteer table."""
+    create_tables()  # Ensure the table exists
     conn = connect()
-    create_tables()
     try:
         with conn as database:
             cursor = database.cursor()
             insert = '''
             INSERT INTO volunteer (
-                TGID, username, first_name, last_name, email, phone, address, highest_education, is_employed, needs, bio,
-                 profile_pic
-            ) VALUES (?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?) '''
+                TGID, username, first_name, last_name, email, phone, address, highest_education, is_employed, needs, bio, profile_pic
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            '''
             cursor.execute(insert, data)
             database.commit()
     except sq.Error as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while inserting data: {e}")
+    finally:
+        conn.close()
 
 
 def search_table_by_tg_id(tg_id):
-    """Search table by tg_id"""
+    """Search the volunteer table by TGID."""
+    create_tables()  # Ensure the table exists
     conn = connect()
-    create_tables()
     try:
         with conn as database:
             cursor = database.cursor()
-            search = '''
-            SELECT * FROM volunteer WHERE TGID = ?
-            '''
+            search = 'SELECT * FROM volunteer WHERE TGID = ?'
             cursor.execute(search, (tg_id,))
             return cursor.fetchone()
     except sq.Error as e:
-        print(f"An error occurred: {e}")
-
+        print(f"An error occurred while searching for TGID {tg_id}: {e}")
+    finally:
+        conn.close()
