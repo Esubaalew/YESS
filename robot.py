@@ -3,6 +3,8 @@ import logging
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler
 from utils.db.tools import search_table_by_tg_id, insert_data, search_table_by_email, search_table_by_phone
+from utils.send_email import send_email
+from utils.send_sms import send_sms
 from utils.validation import is_valid_name, is_valid_email, is_valid_phone, is_valid_needs
 
 # Define states for the registration conversation
@@ -177,11 +179,11 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if 10 <= len(bio) <= 300:  # Adjust limits as needed
         tg_id = update.effective_user.id
         username = update.effective_user.username
-        first_name = context.user_data['first_name'].title().strip()
-        last_name = context.user_data['last_name'].title().strip()
+        first_name = context.user_data['first_name'].title()
+        last_name = context.user_data['last_name'].title()
         gender = context.user_data['gender']
-        email = context.user_data['email'].lower().strip()
-        phone = context.user_data['phone'].strip()
+        email = context.user_data['email']
+        phone = context.user_data['phone']
         address = context.user_data['address']
         highest_education = context.user_data['highest_education']
         is_employed = context.user_data['is_employed']
@@ -193,6 +195,10 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             bio, None
         )
         insert_data(data)
+
+        # Send email and SMS
+        send_email(email, "Registration Successful", "Thank you for registering with YesEthiopia!")
+        #send_sms(phone, "Thank you for registering with YesEthiopia!")
 
         await update.message.reply_text("Registration complete! Thank you for providing your details.")
         return ConversationHandler.END
