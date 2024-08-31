@@ -3,6 +3,7 @@ import logging
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler
 from utils.db.tools import search_table_by_tg_id, insert_data
+from utils.validation import is_valid_name, is_valid_email, is_valid_phone, is_valid_needs
 
 # Define states for the registration conversation
 FIRST_NAME, LAST_NAME, GENDER, EMAIL, PHONE, ADDRESS, HIGHEST_EDUCATION, IS_EMPLOYED, NEEDS, BIO = range(10)
@@ -49,37 +50,64 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['first_name'] = update.message.text
-    await update.message.reply_text("Please enter your last name:")
-    return LAST_NAME
+    name = update.message.text
+    if is_valid_name(name):
+        context.user_data['first_name'] = name
+        await update.message.reply_text("Please enter your last name:")
+        return LAST_NAME
+    else:
+        await update.message.reply_text(
+            "Invalid first name. It should be at least 3 characters long and contain only letters. Please enter your first name again:")
+        return FIRST_NAME
 
 
 async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['last_name'] = update.message.text
-    gender_keyboard = [['Male', 'Female']]
-    await update.message.reply_text(
-        "Please specify your gender:",
-        reply_markup=ReplyKeyboardMarkup(gender_keyboard, one_time_keyboard=True)
-    )
-    return GENDER
+    name = update.message.text
+    if is_valid_name(name):
+        context.user_data['last_name'] = name
+        gender_keyboard = [['Male', 'Female']]
+        await update.message.reply_text(
+            "Please specify your gender:",
+            reply_markup=ReplyKeyboardMarkup(gender_keyboard, one_time_keyboard=True)
+        )
+        return GENDER
+    else:
+        await update.message.reply_text(
+            "Invalid last name. It should be at least 3 characters long and contain only letters. Please enter your last name again:")
+        return LAST_NAME
 
 
 async def gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['gender'] = update.message.text
-    await update.message.reply_text("Please enter your email address:", reply_markup=ReplyKeyboardRemove())
-    return EMAIL
+    gender = update.message.text
+    if gender in ['Male', 'Female']:
+        context.user_data['gender'] = gender
+        await update.message.reply_text("Please enter your email address:", reply_markup=ReplyKeyboardRemove())
+        return EMAIL
+    else:
+        await update.message.reply_text("Invalid gender. Please choose from the keyboard options.")
+        return GENDER
 
 
 async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['email'] = update.message.text
-    await update.message.reply_text("Please enter your phone number:")
-    return PHONE
+    email = update.message.text
+    if is_valid_email(email):
+        context.user_data['email'] = email
+        await update.message.reply_text("Please enter your phone number:")
+        return PHONE
+    else:
+        await update.message.reply_text("Invalid email format. Please enter a valid email address:")
+        return EMAIL
 
 
 async def phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['phone'] = update.message.text
-    await update.message.reply_text("Please enter your address:")
-    return ADDRESS
+    phone = update.message.text
+    if is_valid_phone(phone):
+        context.user_data['phone'] = phone
+        await update.message.reply_text("Please enter your address:")
+        return ADDRESS
+    else:
+        await update.message.reply_text("Invalid phone number. Please enter a valid phone number with country code:")
+        return PHONE
 
 
 async def address(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -93,50 +121,71 @@ async def address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def highest_education(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['highest_education'] = update.message.text
-    employment_keyboard = [['Yes', 'No']]
-    await update.message.reply_text(
-        "Are you currently employed?",
-        reply_markup=ReplyKeyboardMarkup(employment_keyboard, one_time_keyboard=True)
-    )
-    return IS_EMPLOYED
+    highest_education = update.message.text
+    if highest_education in ['High School', 'Undergraduate', 'Graduate', 'Postgraduate']:
+        context.user_data['highest_education'] = highest_education
+        employment_keyboard = [['Yes', 'No']]
+        await update.message.reply_text(
+            "Are you currently employed?",
+            reply_markup=ReplyKeyboardMarkup(employment_keyboard, one_time_keyboard=True)
+        )
+        return IS_EMPLOYED
+    else:
+        await update.message.reply_text("Invalid education level. Please choose from the keyboard options.")
+        return HIGHEST_EDUCATION
 
 
 async def is_employed(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['is_employed'] = update.message.text.lower() == 'yes'
-    await update.message.reply_text("Please enter your needs (e.g., mentorship, job assistance):",
-                                    reply_markup=ReplyKeyboardRemove())
-    return NEEDS
+    is_employed = update.message.text.lower()
+    if is_employed in ['yes', 'no']:
+        context.user_data['is_employed'] = is_employed == 'yes'
+        await update.message.reply_text("Please enter your needs (e.g., mentorship, job assistance):",
+                                        reply_markup=ReplyKeyboardRemove())
+        return NEEDS
+    else:
+        await update.message.reply_text("Invalid response. Please enter 'yes' or 'no'.")
+        return IS_EMPLOYED
 
 
 async def needs(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['needs'] = update.message.text
-    await update.message.reply_text("Please provide a short bio:")
-    return BIO
+    needs = update.message.text
+    if is_valid_needs(needs):
+        context.user_data['needs'] = needs
+        await update.message.reply_text("Please provide a short bio:")
+        return BIO
+    else:
+        await update.message.reply_text(
+            "Invalid input. Needs should only contain letters and spaces. Please enter your needs again:")
+        return NEEDS
 
 
 async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    tg_id = update.effective_user.id
-    username = update.effective_user.username
-    first_name = context.user_data['first_name']
-    last_name = context.user_data['last_name']
-    gender = context.user_data['gender']
-    email = context.user_data['email']
-    phone = context.user_data['phone']
-    address = context.user_data['address']
-    highest_education = context.user_data['highest_education']
-    is_employed = context.user_data['is_employed']
-    needs = context.user_data['needs']
     bio = update.message.text
+    if 10 <= len(bio) <= 300:  # Adjust limits as needed
+        tg_id = update.effective_user.id
+        username = update.effective_user.username
+        first_name = context.user_data['first_name']
+        last_name = context.user_data['last_name']
+        gender = context.user_data['gender']
+        email = context.user_data['email']
+        phone = context.user_data['phone']
+        address = context.user_data['address']
+        highest_education = context.user_data['highest_education']
+        is_employed = context.user_data['is_employed']
+        needs = context.user_data['needs']
 
-    data = (
-        tg_id, username, first_name, last_name, gender, email, phone, address, highest_education, is_employed, needs,
-        bio, None
-    )
-    insert_data(data)
+        data = (
+            tg_id, username, first_name, last_name, gender, email, phone, address, highest_education, is_employed,
+            needs,
+            bio, None
+        )
+        insert_data(data)
 
-    await update.message.reply_text("Registration complete! Thank you for providing your details.")
-    return ConversationHandler.END
+        await update.message.reply_text("Registration complete! Thank you for providing your details.")
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("Bio should be between 10 and 300 characters. Please provide a valid bio:")
+        return BIO
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
