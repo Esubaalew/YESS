@@ -9,7 +9,7 @@ def create_tables():
         with conn as database:
             cursor = database.cursor()
             create = '''
-            CREATE TABLE IF NOT EXISTS Volunter (
+            CREATE TABLE IF NOT EXISTS volunteer (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 TGID TEXT UNIQUE NOT NULL,
                 username TEXT NOT NULL,

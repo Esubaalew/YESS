@@ -2,6 +2,5 @@
 .env
 .vscode
 utils\__pycache__
-utils/db/yess.sql
-identifier.sqlite
+utils/db/yess.sqlite
 .idea
