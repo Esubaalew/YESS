@@ -1,2 +1,7 @@
 /yess
 .env
+.vscode
+utils\__pycache__
+utils/db/yess.sql
+identifier.sqlite
+.idea
