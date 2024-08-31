@@ -198,7 +198,7 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Send email and SMS
         send_email(email, "Registration Successful", "Thank you for registering with YesEthiopia!")
-        #send_sms(phone, "Thank you for registering with YesEthiopia!")
+        # send_sms(phone, "Thank you for registering with YesEthiopia!")
 
         await update.message.reply_text("Registration complete! Thank you for providing your details.")
         return ConversationHandler.END

@@ -1,10 +1,11 @@
 from twilio.rest import Client
+from decouple import config
 
 
 def send_sms(to_phone, message):
-    account_sid = 'AC8c2c76de2242051d425a909af44a84af'
-    auth_token = 'AC8c2c76de2242051d425a909af44a84af:5de7fad157efaac3c6a6c9b0944bed14'
-    from_phone = '+12403485067'
+    account_sid = config('TWILIO_ACCOUNT_SID')
+    auth_token = config('TWILIO_AUTH_TOKEN')
+    from_phone = config('TWILIO_PHONE_NUMBER')
 
     client = Client(account_sid, auth_token)
 

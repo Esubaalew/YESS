@@ -1,13 +1,14 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from decouple import config
 
 
 def send_email(to_email, subject, body):
-    smtp_server = 'smtp.gmail.com'
-    smtp_port = 587
-    smtp_user = 'esubalewchekol6@gmail.com'
-    smtp_password = 'todx oeil rtih jvek'
+    smtp_server = config('SMTP_SERVER')
+    smtp_port = config('SMTP_PORT', cast=int)
+    smtp_user = config('SMTP_USER')
+    smtp_password = config('SMTP_PASSWORD')
 
     msg = MIMEMultipart()
     msg['From'] = smtp_user
