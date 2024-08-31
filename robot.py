@@ -1,8 +1,6 @@
-"""Yes Ethiopia bot code"""
-
 from decouple import config, UndefinedValueError
 import logging
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler
 from utils.db.tools import search_table_by_tg_id, insert_data
 
@@ -58,13 +56,17 @@ async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['last_name'] = update.message.text
-    await update.message.reply_text("Please specify your gender (Male/Female):")
+    gender_keyboard = [['Male', 'Female']]
+    await update.message.reply_text(
+        "Please specify your gender:",
+        reply_markup=ReplyKeyboardMarkup(gender_keyboard, one_time_keyboard=True)
+    )
     return GENDER
 
 
 async def gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['gender'] = update.message.text
-    await update.message.reply_text("Please enter your email address:")
+    await update.message.reply_text("Please enter your email address:", reply_markup=ReplyKeyboardRemove())
     return EMAIL
 
 
@@ -82,19 +84,28 @@ async def phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['address'] = update.message.text
-    await update.message.reply_text("Please enter your highest education level:")
+    education_keyboard = [['High School', 'Undergraduate'], ['Graduate', 'Postgraduate']]
+    await update.message.reply_text(
+        "Please enter your highest education level:",
+        reply_markup=ReplyKeyboardMarkup(education_keyboard, one_time_keyboard=True)
+    )
     return HIGHEST_EDUCATION
 
 
 async def highest_education(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['highest_education'] = update.message.text
-    await update.message.reply_text("Are you currently employed? (yes/no):")
+    employment_keyboard = [['Yes', 'No']]
+    await update.message.reply_text(
+        "Are you currently employed?",
+        reply_markup=ReplyKeyboardMarkup(employment_keyboard, one_time_keyboard=True)
+    )
     return IS_EMPLOYED
 
 
 async def is_employed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['is_employed'] = update.message.text.lower() == 'yes'
-    await update.message.reply_text("Please enter your needs (e.g., mentorship, job assistance):")
+    await update.message.reply_text("Please enter your needs (e.g., mentorship, job assistance):",
+                                    reply_markup=ReplyKeyboardRemove())
     return NEEDS
 
 
@@ -119,7 +130,8 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bio = update.message.text
 
     data = (
-        tg_id, username, first_name, last_name, gender, email, phone, address, highest_education, is_employed, needs, bio, None
+        tg_id, username, first_name, last_name, gender, email, phone, address, highest_education, is_employed, needs,
+        bio, None
     )
     insert_data(data)
 
@@ -129,7 +141,7 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancels and ends the conversation."""
-    await update.message.reply_text("Registration has been canceled.")
+    await update.message.reply_text("Registration has been canceled.", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 
