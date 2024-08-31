@@ -73,4 +73,50 @@ def search_table_by_tg_id(tg_id):
     finally:
         conn.close()
 
-create_tables()
+
+def search_table_by_username(username):
+    """Search the volunteer table by username."""
+    create_tables()  # Ensure the table exists
+    conn = connect()
+    try:
+        with conn as database:
+            cursor = database.cursor()
+            search = 'SELECT * FROM volunteer WHERE username = ?'
+            cursor.execute(search, (username,))
+            return cursor.fetchone()
+    except sq.Error as e:
+        print(f"An error occurred while searching for username {username}: {e}")
+    finally:
+        conn.close()
+
+
+def search_table_by_phone(phone):
+    """Search the volunteer table by phone number."""
+    create_tables()  # Ensure the table exists
+    conn = connect()
+    try:
+        with conn as database:
+            cursor = database.cursor()
+            search = 'SELECT * FROM volunteer WHERE phone = ?'
+            cursor.execute(search, (phone,))
+            return cursor.fetchone()
+    except sq.Error as e:
+        print(f"An error occurred while searching for phone number {phone}: {e}")
+    finally:
+        conn.close()
+
+
+def search_table_by_email(email):
+    """Search the volunteer table by email."""
+    create_tables()  # Ensure the table exists
+    conn = connect()
+    try:
+        with conn as database:
+            cursor = database.cursor()
+            search = 'SELECT * FROM volunteer WHERE email = ?'
+            cursor.execute(search, (email,))
+            return cursor.fetchone()
+    except sq.Error as e:
+        print(f"An error occurred while searching for email {email}: {e}")
+    finally:
+        conn.close()
