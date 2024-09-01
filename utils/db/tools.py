@@ -120,3 +120,19 @@ def search_table_by_email(email):
         print(f"An error occurred while searching for email {email}: {e}")
     finally:
         conn.close()
+
+
+def is_joined_group(tg_id):
+    """Check if the volunteer has joined the group."""
+    create_tables()  # Ensure the table exists
+    conn = connect()
+    try:
+        with conn as database:
+            cursor = database.cursor()
+            search = 'SELECT is_joined_group FROM volunteer WHERE TGID = ?'
+            cursor.execute(search, (tg_id,))
+            return bool(cursor.fetchone()[0])
+    except sq.Error as e:
+        print(f"An error occurred while searching for TGID {tg_id}: {e}")
+    finally:
+        conn.close()
