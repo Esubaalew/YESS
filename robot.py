@@ -54,6 +54,29 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def send_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Ask user to choose a topic to send a message to."""
+    tg_id = update.effective_user.id
+
+    # Check if the user is registered
+    is_registered = search_table_by_tg_id(tg_id)
+    if not is_registered:
+        await update.message.reply_text("You need to be registered to use this feature. Please use /register to start "
+                                        "the registration process.")
+        return
+
+    # Check if the user has joined the channel
+    user_status = await check_user_status(update, context)
+    if user_status == "error":
+        await update.message.reply_text("An error occurred. Please try again later.")
+        return
+
+    if user_status not in [ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
+        await update.message.reply_text(
+            f"Your current status: {user_status}\nPlease join {CHANNEL_USERNAME} before using the bot."
+        )
+        await send_join_channel_button(update.message.chat_id, context)
+        return
+
+    # Display topic selection keyboard
     keyboard = [
         [
             InlineKeyboardButton("General", callback_data="1"),
@@ -71,6 +94,7 @@ async def send_message_command(update: Update, context: ContextTypes.DEFAULT_TYP
         "Choose the topic for your message:", reply_markup=reply_markup
     )
     return CHOOSE_TOPIC
+
 
 
 async def choose_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -101,9 +125,25 @@ async def receive_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Receive the user's message and send it to the group under the selected topic."""
     message_to_send = update.message.text
     topic_id = context.user_data.get("topic_id")
+    tg_id = update.effective_user.id
 
-    if topic_id == "1":  # Special case for "General" topic
-        # Send message to the main group chat without specifying a thread ID
+    # Check if user is registered
+    is_registered = search_table_by_tg_id(tg_id)
+    if not is_registered:
+        await update.message.reply_text("You need to be registered to send messages. Please use /register to start "
+                                        "the registration process.")
+        return ConversationHandler.END
+
+    # Check if the user has joined the channel
+    user_status = await check_user_status(update, context)
+    if user_status not in [ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
+        await send_join_channel_button(update.message.chat_id, context)
+        await update.message.reply_text("Message failed. Please join our channel and try again.")
+        return ConversationHandler.END
+
+    # Send message based on topic selection
+    if topic_id == "1":
+        # Special case for "General" topic
         await context.bot.send_message(
             chat_id=GROUP_ID,
             text=message_to_send
