@@ -52,6 +52,32 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
 
 
+async def introduce(context: ContextTypes.DEFAULT_TYPE, user_data):
+    """Introduce the new registered user to the group."""
+    tg_id = user_data['tg_id']
+    user_info = search_table_by_tg_id(tg_id)
+
+
+    if user_info:
+        first_name = user_info[3]
+        last_name = user_info[4]
+        highest_education = user_info[9]
+        is_employed = "Employed" if user_info[10] else "Unemployed"
+        address = user_info[8]
+
+        introduction_message = (
+            f"👋 Welcome our new member!\n"
+            f"My name is {first_name} {last_name}.\n"
+            f"My highest education level is {highest_education}.\n"
+            f"I am currently {is_employed}.\n"
+            f"I live in {address}.\n"
+
+            f"Looking forward to contributing to YesEthiopia!"
+        )
+
+        await context.bot.send_message(chat_id=GROUP_ID, text=introduction_message)
+
+
 async def send_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Ask user to choose a topic to send a message to."""
     tg_id = update.effective_user.id
@@ -94,7 +120,6 @@ async def send_message_command(update: Update, context: ContextTypes.DEFAULT_TYP
         "Choose the topic for your message:", reply_markup=reply_markup
     )
     return CHOOSE_TOPIC
-
 
 
 async def choose_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -158,7 +183,6 @@ async def receive_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("Your message has been sent to the group!")
     return ConversationHandler.END
-
 
 
 async def leave(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -316,7 +340,6 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user_status = await check_user_status(update, context)
         if user_status in [ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
-
             username = update.effective_user.username
             first_name = context.user_data['first_name'].title()
             last_name = context.user_data['last_name'].title()
@@ -330,18 +353,19 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             data = (
                 tg_id, username, first_name, last_name, gender, email, phone, address, highest_education, is_employed,
-                needs,
-                bio, None
+                needs, bio, None
             )
             insert_data(data)
 
             await update.message.reply_text("Registration complete! Thank you for providing your details.")
-            send_email(email, "Wellcome to YessEthiopia", f"Dear {first_name} {last_name} your registration to "
-                                                          f"YessEthiopia was successfully. YessRobot will tell "
-                                                          f"your information to the admin. ")
+            send_email(email, "Welcome to YesEthiopia", f"Dear {first_name} {last_name}, your registration to "
+                                                        f"YesEthiopia was successful. YesRobot will inform "
+                                                        f"your details to the admin.")
+
+            # Call the introduce function to announce the new user
+            await introduce(context, {'tg_id': tg_id})
             return ConversationHandler.END
         else:
-
             await send_join_channel_button(update.effective_chat.id, context)
             await update.message.reply_text("Registration failed, Please join our channel to complete your "
                                             "registration.")
