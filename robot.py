@@ -1,10 +1,14 @@
 from decouple import config, UndefinedValueError
 import logging
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup, \
+    ChatMember
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler
-from utils.db.tools import search_table_by_tg_id, insert_data, search_table_by_email, search_table_by_phone
+from telegram.error import BadRequest
+from utils.db.tools import search_table_by_tg_id, insert_data, search_table_by_email, search_table_by_phone, \
+    is_joined_group
 from utils.send_email import send_email
 from utils.send_sms import send_sms
+
 from utils.validation import is_valid_name, is_valid_email, is_valid_phone, is_valid_needs
 
 # Define states for the registration conversation
@@ -15,6 +19,7 @@ try:
 except UndefinedValueError:
     print("Error: The TOKEN environment variable is not set.")
     exit(1)
+CHANNEL_USERNAME = "@yess_Ethiopic"
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -46,6 +51,18 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Initiates the registration process."""
+    user_status = await check_user_status(update, context)
+    if user_status == "error":
+        await update.message.reply_text("An error occurred. Please try again later.")
+        return
+    if user_status not in [
+        ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER
+    ]:
+        await update.message.reply_text(
+            f"Your current status: {user_status}\nPlease join {CHANNEL_USERNAME} before using the bot."
+        )
+        await send_join_channel_button(update.message.chat_id, context)
+        return
     if search_table_by_tg_id(update.effective_user.id):
         await update.message.reply_text("You are already registered.")
         return ConversationHandler.END
@@ -178,33 +195,62 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bio = update.message.text
     if 10 <= len(bio) <= 300:  # Adjust limits as needed
         tg_id = update.effective_user.id
-        username = update.effective_user.username
-        first_name = context.user_data['first_name'].title()
-        last_name = context.user_data['last_name'].title()
-        gender = context.user_data['gender']
-        email = context.user_data['email']
-        phone = context.user_data['phone']
-        address = context.user_data['address']
-        highest_education = context.user_data['highest_education']
-        is_employed = context.user_data['is_employed']
-        needs = context.user_data['needs']
 
-        data = (
-            tg_id, username, first_name, last_name, gender, email, phone, address, highest_education, is_employed,
-            needs,
-            bio, None
-        )
-        insert_data(data)
+        user_status = await check_user_status(update, context)
+        if user_status in [ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
 
-        # Send email and SMS
-        send_email(email, "Registration Successful", "Thank you for registering with YesEthiopia!")
-        # send_sms(phone, "Thank you for registering with YesEthiopia!")
+            username = update.effective_user.username
+            first_name = context.user_data['first_name'].title()
+            last_name = context.user_data['last_name'].title()
+            gender = context.user_data['gender']
+            email = context.user_data['email']
+            phone = context.user_data['phone']
+            address = context.user_data['address']
+            highest_education = context.user_data['highest_education']
+            is_employed = context.user_data['is_employed']
+            needs = context.user_data['needs']
 
-        await update.message.reply_text("Registration complete! Thank you for providing your details.")
-        return ConversationHandler.END
+            data = (
+                tg_id, username, first_name, last_name, gender, email, phone, address, highest_education, is_employed,
+                needs,
+                bio, None
+            )
+            insert_data(data)
+
+            await update.message.reply_text("Registration complete! Thank you for providing your details.")
+            return ConversationHandler.END
+        else:
+
+            await send_join_channel_button(update.effective_chat.id, context)
+            await update.message.reply_text("Registration failed, Please join our channel to complete your "
+                                            "registration.")
+            return ConversationHandler.END
     else:
         await update.message.reply_text("Bio should be between 10 and 300 characters. Please provide a valid bio:")
         return BIO
+
+
+async def send_join_channel_button(chat_id, context):
+    button = InlineKeyboardButton("Join Channel", url="https://t.me/yess_Ethiopic")
+    keyboard = [[button]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=chat_id,
+                                   text="To use this bot, please join our channel:",
+                                   reply_markup=reply_markup)
+
+
+async def check_user_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    user_id = update.effective_user.id
+    try:
+        chat_member = await context.bot.get_chat_member(chat_id=CHANNEL_USERNAME,
+                                                        user_id=user_id)
+
+        user_status = chat_member.status
+        print(f"User status: {user_status}")
+        return user_status
+    except BadRequest as e:
+        print(f"Error: {e}")
+        return "error"
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
