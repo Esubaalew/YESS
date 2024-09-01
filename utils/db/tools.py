@@ -136,3 +136,19 @@ def is_joined_group(tg_id):
         print(f"An error occurred while searching for TGID {tg_id}: {e}")
     finally:
         conn.close()
+
+
+def change_joined_group_status(tg_id, status):
+    """Change the joined group status of the volunteer."""
+    create_tables()  # Ensure the table exists
+    conn = connect()
+    try:
+        with conn as database:
+            cursor = database.cursor()
+            update = 'UPDATE volunteer SET is_joined_group = ? WHERE TGID = ?'
+            cursor.execute(update, (status, tg_id))
+            database.commit()
+    except sq.Error as e:
+        print(f"An error occurred while changing the joined group status of TGID {tg_id}: {e}")
+    finally:
+        conn.close()
