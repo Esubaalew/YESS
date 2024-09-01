@@ -2,7 +2,8 @@ from decouple import config, UndefinedValueError
 import logging
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup, \
     ChatMember
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler, \
+    CallbackQueryHandler
 from telegram.error import BadRequest
 from utils.db.tools import search_table_by_tg_id, insert_data, search_table_by_email, search_table_by_phone, \
     is_joined_group
@@ -13,6 +14,7 @@ from utils.validation import is_valid_name, is_valid_email, is_valid_phone, is_v
 
 # Define states for the registration conversation
 FIRST_NAME, LAST_NAME, GENDER, EMAIL, PHONE, ADDRESS, HIGHEST_EDUCATION, IS_EMPLOYED, NEEDS, BIO = range(10)
+ASK_MESSAGE, CHOOSE_TOPIC = range(10, 12)
 
 try:
     TOKEN = config('TOKEN')
@@ -20,6 +22,7 @@ except UndefinedValueError:
     print("Error: The TOKEN environment variable is not set.")
     exit(1)
 CHANNEL_USERNAME = "@yess_Ethiopic"
+GROUP_ID = -1002249761175
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -47,6 +50,81 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
+
+
+async def send_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ask user to choose a topic to send a message to."""
+    keyboard = [
+        [
+            InlineKeyboardButton("General", callback_data="1"),
+            InlineKeyboardButton("Employment", callback_data="7"),
+        ],
+        [
+            InlineKeyboardButton("Training", callback_data="23"),
+            InlineKeyboardButton("Business Idea", callback_data="5"),
+            InlineKeyboardButton("Scholarship", callback_data="2"),
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        "Choose the topic for your message:", reply_markup=reply_markup
+    )
+    return CHOOSE_TOPIC
+
+
+async def choose_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle user's choice of topic and ask for the message content."""
+    query = update.callback_query
+    await query.answer()
+
+    # Store chosen topic ID
+    context.user_data["topic_id"] = query.data
+
+    # Provide feedback to the user
+    topic_name = {
+        "1": "General",
+        "7": "Employment",
+        "23": "Training",
+        "5": "Business Idea",
+        "2": "Scholarship",
+    }.get(query.data, "Unknown Topic")
+
+    await query.edit_message_text(
+        text=f"You chose {topic_name}. Please enter the message related to {topic_name}:"
+    )
+
+    return ASK_MESSAGE
+
+
+async def receive_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive the user's message and send it to the group under the selected topic."""
+    message_to_send = update.message.text
+    topic_id = context.user_data.get("topic_id")
+
+    if topic_id == "1":  # Special case for "General" topic
+        # Send message to the main group chat without specifying a thread ID
+        await context.bot.send_message(
+            chat_id=GROUP_ID,
+            text=message_to_send
+        )
+    else:
+        # Send the message to the group with the specified thread ID
+        await context.bot.send_message(
+            chat_id=GROUP_ID,
+            text=message_to_send,
+            message_thread_id=int(topic_id),
+        )
+
+    await update.message.reply_text("Your message has been sent to the group!")
+    return ConversationHandler.END
+
+
+
+async def leave(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancels and ends the conversation."""
+    await update.message.reply_text("Operation cancelled.", reply_markup=ReplyKeyboardRemove())
+    return ConversationHandler.END
 
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -219,8 +297,8 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await update.message.reply_text("Registration complete! Thank you for providing your details.")
             send_email(email, "Wellcome to YessEthiopia", f"Dear {first_name} {last_name} your registration to "
-                                                                f"YessEthiopia was successfully. YessRobot will tell "
-                                                                f"your information to the admin. ")
+                                                          f"YessEthiopia was successfully. YessRobot will tell "
+                                                          f"your information to the admin. ")
             return ConversationHandler.END
         else:
 
@@ -262,12 +340,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     application = ApplicationBuilder().token(TOKEN).build()
 
     # Add a conversation handler for the registration process
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('register', register)],
+    registration_handler = ConversationHandler(
+        entry_points=[CommandHandler("register", register)],
         states={
             FIRST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, first_name)],
             LAST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, last_name)],
@@ -275,16 +353,31 @@ if __name__ == '__main__':
             EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, email)],
             PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, phone)],
             ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, address)],
-            HIGHEST_EDUCATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, highest_education)],
+            HIGHEST_EDUCATION: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, highest_education)
+            ],
             IS_EMPLOYED: [MessageHandler(filters.TEXT & ~filters.COMMAND, is_employed)],
             NEEDS: [MessageHandler(filters.TEXT & ~filters.COMMAND, needs)],
             BIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, bio)],
         },
-        fallbacks=[CommandHandler('cancel', cancel)],
+        fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    application.add_handler(CommandHandler('start', start))
-    application.add_handler(conv_handler)
-    application.add_handler(MessageHandler(filters.COMMAND & ~filters.Regex('^/start$'), unknown))
+    # Conversation handler to handle the message send flow
+    send_message_handler = ConversationHandler(
+        entry_points=[CommandHandler("sendmessage", send_message_command)],
+        states={
+            CHOOSE_TOPIC: [CallbackQueryHandler(choose_topic)],
+            ASK_MESSAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_message)],
+        },
+        fallbacks=[CommandHandler("leave", leave)],
+    )
 
+    # Register handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(registration_handler)
+    application.add_handler(send_message_handler)
+    application.add_handler(MessageHandler(filters.COMMAND & ~filters.Regex("^/start$"), unknown))
+    application.add_handler(MessageHandler(filters.ALL, echo))
+    application.add_handler(CallbackQueryHandler(choose_topic))
     application.run_polling()
