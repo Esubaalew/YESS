@@ -218,6 +218,9 @@ async def bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             insert_data(data)
 
             await update.message.reply_text("Registration complete! Thank you for providing your details.")
+            send_email(email, "Wellcome to YessEthiopia", f"Dear {first_name} {last_name} your registration to "
+                                                                f"YessEthiopia was successfully. YessRobot will tell "
+                                                                f"your information to the admin. ")
             return ConversationHandler.END
         else:
 
