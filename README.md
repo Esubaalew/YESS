@@ -20,10 +20,7 @@ To get started with YessRobot, follow these steps:
 ## Usage
 
 Once the bot is up and running, volunteers can interact with it through Telegram. YessRobot provides a user-friendly interface to manage volunteer information and assist with registration.
-
-## Contributing
-
-We welcome contributions to YessRobot! If you would like to contribute, please follow the guidelines outlined in the [CONTRIBUTING.md](https://github.com/YessEthiopia/YessRobot/blob/main/CONTRIBUTING.md) file.
+=
 
 ## License
 
